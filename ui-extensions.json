@@ -2,7 +2,13 @@
   "name": "Google Drive Connect",
   "description": "Connect Google Drive folders to HubSpot records.",
   "uid": "hubspot-drive-connect",
-  "scopes": ["crm.objects.companies.read", "crm.objects.contacts.read", "crm.objects.deals.read", "crm.objects.tickets.read", "crm.schemas.custom.read"],
+  "scopes": [
+    "crm.objects.companies.read",
+    "crm.objects.contacts.read",
+    "crm.objects.deals.read",
+    "crm.objects.tickets.read",
+    "crm.schemas.custom.read"
+  ],
   "public": false,
   "extensions": {
     "crm": {
@@ -13,12 +19,7 @@
           "serverless": {
             "file": "app/drive/page.jsx"
           },
-          "objectTypes": [
-            "COMPANY",
-            "CONTACT",
-            "DEAL",
-            "TICKET"
-          ]
+          "objectTypes": ["COMPANY", "CONTACT", "DEAL", "TICKET"]
         }
       ]
     }

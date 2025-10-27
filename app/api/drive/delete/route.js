@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { google } from "googleapis";
 
-export async function GET(req) {
+export async function DELETE(req) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -13,12 +13,10 @@ export async function GET(req) {
   }
 
   const { searchParams } = new URL(req.url);
-  // const folderId = searchParams.get("folderId") || "1ry7mhpcN25TeZuReUFZqS86wgjtXHGcM";
-  const folderId = "1ry7mhpcN25TeZuReUFZqS86wgjtXHGcM";
+  const fileId = searchParams.get("fileId");
 
-  console.log("Fetching files from folderId:", folderId);
-  if (!folderId) {
-    return new Response(JSON.stringify({ error: "folderId is required" }), {
+  if (!fileId) {
+    return new Response(JSON.stringify({ error: "fileId is required" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
@@ -30,28 +28,21 @@ export async function GET(req) {
   const drive = google.drive({ version: "v3", auth: oauth2Client });
 
   try {
-    const res = await drive.files.list({
-      q: `'${folderId}' in parents and trashed = false`,
-      fields:
-        "files(id, name, mimeType, modifiedTime, webViewLink, iconLink, thumbnailLink, parents)",
+    await drive.files.delete({
+      fileId: fileId,
       supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      pageSize: 100, // limit results for performance
     });
 
-    return new Response(JSON.stringify(res.data.files || []), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(null, { status: 204 });
   } catch (error) {
-    console.error("Error fetching files from Google Drive:", error);
+    console.error("Error deleting file from Google Drive:", error);
     if (error.code === 401) {
       return new Response(JSON.stringify({ error: "Authentication error" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ error: "Failed to fetch files" }), {
+    return new Response(JSON.stringify({ error: "Failed to delete file" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

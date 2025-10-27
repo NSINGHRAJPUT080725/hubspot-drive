@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
 export default function DrivePreview({ fileId }) {
   if (!fileId) {
-    return null
+    return null;
   }
 
   return (
@@ -12,8 +12,8 @@ export default function DrivePreview({ fileId }) {
         src={`https://drive.google.com/file/d/${fileId}/preview`}
         width="100%"
         height="600px"
-        style={{ border: 'none' }}
+        style={{ border: "none" }}
       ></iframe>
     </div>
-  )
+  );
 }

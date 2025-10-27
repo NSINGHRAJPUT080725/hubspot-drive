@@ -20,6 +20,7 @@ export async function POST(req) {
 
   const data = await req.formData();
   const file = data.get("file");
+  const folderId = "1ry7mhpcN25TeZuReUFZqS86wgjtXHGcM"; // Hardcoded folder ID
 
   if (!file) {
     return new Response(JSON.stringify({ error: "File is required" }), {
@@ -30,6 +31,7 @@ export async function POST(req) {
 
   const fileMetadata = {
     name: file.name, // file name in Drive
+    parents: [folderId], // Specify the folder
   };
 
   const media = {
