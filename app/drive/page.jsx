@@ -7,14 +7,20 @@ import DriveUploader from "@/components/DriveUploader";
 
 export default function DrivePage() {
   const { data: session, status } = useSession();
-  const [folderId, setFolderId] = useState(null);
+  const [folderId, setFolderId] = useState("root");
+  const [breadcrumbs, setBreadcrumbs] = useState([
+    { id: "root", name: "My Drive" },
+  ]);
 
   const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [authError, setAuthError] = useState(false);
 
   const fetchFiles = () => {
     if (folderId) {
+      setIsLoading(true);
+      setError(null);
       fetch(`/api/drive/list?folderId=${folderId}`)
         .then((res) => {
           if (res.status === 401) {
@@ -31,22 +37,12 @@ export default function DrivePage() {
         })
         .catch((error) => {
           setError(error.message);
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
     }
   };
-
-  useEffect(() => {
-    // IMPORTANT: Replace this with a real Google Drive folder URL.
-    // 1. Create a folder in your Google Drive.
-    // 2. Open the folder and copy the URL from your browser.
-    // 3. Paste the URL here.
-    const googleDriveUrl =
-      "https://drive.google.com/drive/folders/YOUR_REAL_FOLDER_ID_HERE";
-    const match = googleDriveUrl.match(/folders\/([\w-]+)/);
-    if (match) {
-      setFolderId(match[1]);
-    }
-  }, []);
 
   useEffect(() => {
     if (session) {
@@ -54,6 +50,27 @@ export default function DrivePage() {
       fetchFiles();
     }
   }, [folderId, session]);
+
+  const handleFolderChange = (newFolderId, newFolderName) => {
+    setFolderId(newFolderId);
+    // Check if the folder is already in the breadcrumbs to avoid duplicates
+    if (!breadcrumbs.find((b) => b.id === newFolderId)) {
+      setBreadcrumbs([
+        ...breadcrumbs,
+        { id: newFolderId, name: newFolderName },
+      ]);
+    }
+  };
+
+  const handleBreadcrumbClick = (targetFolderId) => {
+    const breadcrumbIndex = breadcrumbs.findIndex(
+      (b) => b.id === targetFolderId,
+    );
+    if (breadcrumbIndex !== -1) {
+      setFolderId(targetFolderId);
+      setBreadcrumbs(breadcrumbs.slice(0, breadcrumbIndex + 1));
+    }
+  };
 
   const handleDelete = async (fileId) => {
     try {
@@ -104,15 +121,80 @@ export default function DrivePage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="border-b border-gray-200 bg-white p-4 shadow-sm">
-        <h1 className="text-xl font-semibold text-gray-800">Google Drive</h1>
+        <div className="flex items-center">
+          {breadcrumbs.length > 1 && (
+            <button
+              onClick={() => {
+                const parent = breadcrumbs[breadcrumbs.length - 2];
+                handleBreadcrumbClick(parent.id);
+              }}
+              className="mr-4 flex items-center rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-2 -ml-1 h-5 w-5 text-gray-500"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Back
+            </button>
+          )}
+          <nav className="flex items-center text-sm font-medium text-gray-500">
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.id} className="flex items-center">
+                {index > 0 && (
+                  <span className="mx-2 text-gray-400 select-none">/</span>
+                )}
+                <button
+                  onClick={() => handleBreadcrumbClick(crumb.id)}
+                  className={`rounded-md px-2 py-1 transition-colors hover:bg-gray-100 hover:text-gray-900 ${
+                    index === breadcrumbs.length - 1
+                      ? "cursor-default bg-gray-100 font-semibold text-gray-800"
+                      : ""
+                  }`}
+                  disabled={index === breadcrumbs.length - 1}
+                >
+                  {crumb.name}
+                </button>
+              </div>
+            ))}
+          </nav>
+        </div>
       </header>
       <main className="p-4 md:p-8">
         {folderId ? (
-          <div className="mx-auto max-w-7xl">
-            <DriveUploader folderId={folderId} onUploadSuccess={fetchFiles} />
+          <div className="mx-auto w-full">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex space-x-2">
+                <DriveUploader
+                  folderId={folderId}
+                  onUploadSuccess={fetchFiles}
+                />
+                <button
+                  onClick={() => createNewFolder(folderId)} // you’ll define this later
+                  className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-300"
+                >
+                  + New Folder
+                </button>
+              </div>
+              <button
+                onClick={fetchFiles}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm hover:bg-gray-100"
+              >
+                Refresh
+              </button>
+            </div>
             <DriveList
               files={files}
+              isLoading={isLoading}
               handleDelete={handleDelete}
+              onFolderClick={handleFolderChange}
               error={error}
             />
           </div>

@@ -20,7 +20,7 @@ export async function POST(req) {
 
   const data = await req.formData();
   const file = data.get("file");
-  const folderId = "1ry7mhpcN25TeZuReUFZqS86wgjtXHGcM"; // Hardcoded folder ID
+  const folderId = data.get("folderId") || "root";
 
   if (!file) {
     return new Response(JSON.stringify({ error: "File is required" }), {

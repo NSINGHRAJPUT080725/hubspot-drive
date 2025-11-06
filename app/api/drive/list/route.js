@@ -13,16 +13,7 @@ export async function GET(req) {
   }
 
   const { searchParams } = new URL(req.url);
-  // const folderId = searchParams.get("folderId") || "1ry7mhpcN25TeZuReUFZqS86wgjtXHGcM";
-  const folderId = "1ry7mhpcN25TeZuReUFZqS86wgjtXHGcM";
-
-  console.log("Fetching files from folderId:", folderId);
-  if (!folderId) {
-    return new Response(JSON.stringify({ error: "folderId is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const folderId = searchParams.get("folderId") || "root";
 
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({ access_token: session.accessToken });
@@ -30,27 +21,42 @@ export async function GET(req) {
   const drive = google.drive({ version: "v3", auth: oauth2Client });
 
   try {
-    const res = await drive.files.list({
+    let files = [];
+
+    // Fetch My Drive or specific folder
+    const myDrive = await drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
       fields:
         "files(id, name, mimeType, modifiedTime, webViewLink, iconLink, thumbnailLink, parents)",
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
-      pageSize: 100, // limit results for performance
+      corpora: "user",
+      pageSize: 100,
     });
 
-    return new Response(JSON.stringify(res.data.files || []), {
+    files = [...(myDrive.data.files || [])];
+
+    // If root → also fetch "Shared with me"
+    if (folderId === "root") {
+      const sharedWithMe = await drive.files.list({
+        q: "sharedWithMe = true and trashed = false",
+        fields:
+          "files(id, name, mimeType, modifiedTime, webViewLink, iconLink, thumbnailLink, owners)",
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        corpora: "user",
+        pageSize: 100,
+      });
+
+      files = [...files, ...(sharedWithMe.data.files || [])];
+    }
+
+    return new Response(JSON.stringify(files), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Error fetching files from Google Drive:", error);
-    if (error.code === 401) {
-      return new Response(JSON.stringify({ error: "Authentication error" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
     return new Response(JSON.stringify({ error: "Failed to fetch files" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
